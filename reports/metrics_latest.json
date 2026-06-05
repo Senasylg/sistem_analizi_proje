@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-04-25T23:47:17",
+  "target_col": "presleme_suresi_min",
+  "n_rows": 1000,
+  "split": {
+    "train": 800,
+    "test": 200
+  },
+  "baseline": {
+    "rmse": 2.8881719712691973,
+    "mae": 2.5272,
+    "r2": -1.9488317937188526e-07
+  },
+  "cv_best": null,
+  "holdout_train": {
+    "rmse": 2.705097099331263,
+    "mae": 2.3470115567122862,
+    "r2": 0.14717413739489826
+  },
+  "holdout_test": {
+    "rmse": 2.8450182108468756,
+    "mae": 2.4420120033528248,
+    "r2": 0.029659657232306347
+  },
+  "best_params": {
+    "model__loss": "squared_error",
+    "model__learning_rate": 0.08,
+    "model__max_depth": 6,
+    "model__max_leaf_nodes": 63,
+    "model__min_samples_leaf": 40,
+    "model__l2_regularization": 1.0,
+    "model__max_iter": 900
+  },
+  "features": {
+    "raw": [
+      "max_ust_yogunluk",
+      "max_alt_yogunluk",
+      "ure_jel_suresi",
+      "kagit_sag_recine",
+      "kagit_sag_nem",
+      "kagit_sol_recine",
+      "kagit_sol_nem",
+      "plaka_sicakliklari_min",
+      "plaka_sicakliklari_max",
+      "ozgul_basinc_min",
+      "ozgul_basinc_max",
+      "olu_zaman_max"
+    ],
+    "engineered": [],
+    "categorical": "melamin_hatti"
+  },
+  "feature_set": "pruned_safe",
+  "tuning": {
+    "strategy": "stable_pruned"
+  }
+}
