@@ -1733,7 +1733,7 @@ def create_pdf_report(df_filtered, start_date, end_date):
             spaceAfter=8,
             alignment=1
         )
-        elements.append(Paragraph("MELAMINLI LEVHA PRES OPTİMİZASYON RAPORU", title_style))
+        elements.append(Paragraph("MELAMINLI LEVHA PRES OPTIMIZASYON RAPORU", title_style))
         
         # Rapor tarih bilgisi 
         date_style = ParagraphStyle(
@@ -1763,11 +1763,11 @@ def create_pdf_report(df_filtered, start_date, end_date):
 
         summary_data = [
             ['Metrik', 'Değer'],
-            ['Toplam Kayıt', str(len(df_filtered))],
+            ['Toplam Kayit', str(len(df_filtered))],
             ['Ort. Pres Süresi (sn)', _fmt_num(press_series.mean(), 2) if not press_series.empty else ""],
             ['Min Pres Süresi (sn)', _fmt_num(press_series.min(), 2) if not press_series.empty else ""],
             ['Max Pres Süresi (sn)', _fmt_num(press_series.max(), 2) if not press_series.empty else ""],
-            ['Ort. Kazanım (%)', _fmt_num(gain_series.mean(), 2) if not gain_series.empty else ""],
+            ['Ort. Kazanim (%)', _fmt_num(gain_series.mean(), 2) if not gain_series.empty else ""],
         ]
 
         summary_table = Table(
@@ -1938,10 +1938,10 @@ def create_pdf_report(df_filtered, start_date, end_date):
         elements.append(PageBreak())
         
         # Ana veri tablosu
-        heading_para = Paragraph("Optimizasyon Geçmiş Verileri", graph_section_style)
+        heading_para = Paragraph("Optimizasyon Geçmis Verileri", graph_section_style)
         
         table_data = [
-            ['Tarih', 'Hat', 'Pres Süresi (sn)', 'Sıcaklık Min', 'Basınç Min', 'Kazanım (%)']
+            ['Tarih', 'Hat', 'Pres Süresi (sn)', 'Sicaklik Min', 'Basinç Min', 'Kazanim (%)']
         ]
         
         for _, row in df_filtered.iterrows():
