@@ -1646,16 +1646,16 @@ def create_pdf_report(df_filtered, start_date, end_date):
         
         # Türkçe desteği için sistem fontunu kaydet 
         try:
-            # Windows sistemlerde Arial fontunu kullan
-            arial_path = "C:\\Windows\\Fonts\\arial.ttf"
-            pdfmetrics.registerFont(TTFont('Arial', arial_path))
-            default_font = 'Arial'
-            try:
-                arial_bold_path = "C:\\Windows\\Fonts\\arialbd.ttf"
-                pdfmetrics.registerFont(TTFont('Arial-Bold', arial_bold_path))
-                header_font = 'Arial-Bold'
-            except Exception:
-                header_font = default_font
+            # Proje dizinindeki ttf dosyalarının göreli yollarını belirle
+            regular_font_path = str(APP_DIR / "static" / "LiberationSans-Regular.ttf")
+            bold_font_path = str(APP_DIR / "static" / "LiberationSans-Bold.ttf")
+            
+            # Fontları sisteme kaydet
+            pdfmetrics.registerFont(TTFont('TR-Font', regular_font_path))
+            pdfmetrics.registerFont(TTFont('TR-Font-Bold', bold_font_path))
+            
+            default_font = 'TR-Font'
+            header_font = 'TR-Font-Bold'
         except:
             # Başarısız olursa Helvetica kullan (ASCII için)
             default_font = 'Helvetica'
