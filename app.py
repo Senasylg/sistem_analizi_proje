@@ -1106,20 +1106,139 @@ st.markdown("""
 _render_login_gate()
 
 # Model Yükleme 
+def _auto_retrain() -> tuple[bool, str]:
+    """
+    Streamlit Cloud'da veya lokal ortamda model dosyası eksik / sürüm uyuşmazlığı
+    olduğunda CSV'den otomatik yeniden eğitim yapar.
+    Döndürür: (başarı: bool, mesaj: str)
+    """
+    try:
+        import train_model as tm
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            tm.main()
+        return True, buf.getvalue()
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _sklearn_version_ok(feature_info: dict) -> tuple[bool, str]:
+    """
+    feature_info içindeki kaydedilmiş sklearn sürümü ile
+    çalışma zamanındaki sürümü karşılaştırır.
+    Döndürür: (uyumlu: bool, mesaj: str)
+    """
+    import sklearn as _sk
+    runtime_ver = _sk.__version__
+    trained_ver = feature_info.get('sklearn_version')
+    if trained_ver is None:
+        # Eski format — versiyon bilgisi yok, geç
+        return True, ""
+    if trained_ver != runtime_ver:
+        return False, (
+            f"Model scikit-learn {trained_ver} ile eğitildi, "
+            f"mevcut sürüm {runtime_ver}. "
+            "Model otomatik olarak yeniden eğitilecek."
+        )
+    return True, ""
+
+
 @st.cache_resource
 def load_models():
-    try:
-        feature_info_path = 'models/feature_info.pkl'
+    import sklearn as _sk
+    pipeline_path = APP_DIR / 'models' / 'pres_suresi_pipeline.pkl'
+    feature_info_path = APP_DIR / 'models' / 'feature_info.pkl'
+    csv_path = APP_DIR / 'Pres_parametre_Master_dosya.csv'
 
-        # Yeni eğitim scripti tek bir Pipeline kaydediyor ve bu Pipeline içinde hem model hem de özellik bilgileri var. 
-        pipeline_path = 'models/pres_suresi_pipeline.pkl'
-        if os.path.exists(pipeline_path) and os.path.exists(feature_info_path):
-            model = joblib.load(pipeline_path)
-            feature_info = joblib.load(feature_info_path)
-            return model, None, None, feature_info, None
-        return None, None, None, None, "Model dosyaları bulunamadı. Lütfen önce train_model.py çalıştırın."
-    except Exception as e:
-        return None, None, None, None, f"Model yükleme hatası: {str(e)}"
+    # ── İlk deneme: mevcut .pkl dosyalarını yükle ──────────────────────────
+    if pipeline_path.exists() and feature_info_path.exists():
+        try:
+            loaded_model = joblib.load(str(pipeline_path))
+            loaded_fi    = joblib.load(str(feature_info_path))
+
+            # Versiyon uyumluluğunu kontrol et
+            ok, ver_msg = _sklearn_version_ok(loaded_fi)
+            if not ok:
+                # Versiyon uyuşmazlığı → otomatik yeniden eğit
+                if csv_path.exists():
+                    retrain_ok, retrain_log = _auto_retrain()
+                    if retrain_ok:
+                        loaded_model = joblib.load(str(pipeline_path))
+                        loaded_fi    = joblib.load(str(feature_info_path))
+                        return loaded_model, None, None, loaded_fi, None
+                    else:
+                        return None, None, None, None, (
+                            f"Versiyon uyuşmazlığı ({ver_msg}) ve "
+                            f"otomatik yeniden eğitim başarısız: {retrain_log}"
+                        )
+                else:
+                    return None, None, None, None, (
+                        f"Versiyon uyuşmazlığı: {ver_msg} "
+                        "Veri dosyası (Pres_parametre_Master_dosya.csv) bulunamadığı için "
+                        "otomatik yeniden eğitim yapılamadı."
+                    )
+
+            return loaded_model, None, None, loaded_fi, None
+
+        except Exception as load_exc:
+            err_str = str(load_exc)
+            # pickle sürüm hatası veya AttributeError → otomatik yeniden eğit
+            version_err_keywords = (
+                "_RemainderColsList", "AttributeError", "module", "no attribute",
+                "cannot unpickle", "unsupported pickle", "TypeError"
+            )
+            is_version_error = any(kw in err_str for kw in version_err_keywords)
+
+            if is_version_error and csv_path.exists():
+                retrain_ok, retrain_log = _auto_retrain()
+                if retrain_ok:
+                    try:
+                        loaded_model = joblib.load(str(pipeline_path))
+                        loaded_fi    = joblib.load(str(feature_info_path))
+                        return loaded_model, None, None, loaded_fi, None
+                    except Exception as reload_exc:
+                        return None, None, None, None, (
+                            f"Yeniden eğitim sonrası yükleme hatası: {reload_exc}"
+                        )
+                else:
+                    return None, None, None, None, (
+                        f"Model yüklenemedi ({err_str}). "
+                        f"Otomatik yeniden eğitim başarısız: {retrain_log}"
+                    )
+            elif is_version_error:
+                return None, None, None, None, (
+                    f"scikit-learn sürüm uyuşmazlığı: {err_str}\n"
+                    "Veri dosyası (Pres_parametre_Master_dosya.csv) repoda olmadığı için "
+                    "otomatik yeniden eğitim yapılamadı. "
+                    f"requirements.txt içinde scikit-learn=={_sk.__version__} sürümüne pin'leyip "
+                    "modeli bu sürümle yeniden eğitin."
+                )
+            else:
+                return None, None, None, None, f"Model yükleme hatası: {err_str}"
+
+    # ── Dosyalar hiç yok → CSV varsa otomatik eğit ────────────────────────
+    if csv_path.exists():
+        retrain_ok, retrain_log = _auto_retrain()
+        if retrain_ok:
+            try:
+                loaded_model = joblib.load(str(pipeline_path))
+                loaded_fi    = joblib.load(str(feature_info_path))
+                return loaded_model, None, None, loaded_fi, None
+            except Exception as reload_exc:
+                return None, None, None, None, (
+                    f"Otomatik eğitim sonrası yükleme hatası: {reload_exc}"
+                )
+        else:
+            return None, None, None, None, (
+                f"Model dosyaları bulunamadı ve otomatik eğitim başarısız: {retrain_log}"
+            )
+
+    return None, None, None, None, (
+        "Model dosyaları bulunamadı. "
+        "Lütfen Pres_parametre_Master_dosya.csv dosyasının repoda bulunduğundan emin olun."
+    )
+
 model, _, _, feature_info, model_error = load_models()
 
 # Lookup verilerini yükleme (melamin hatları, kalınlık seçenekleri, renk değerleri, kağıt renkleri, pres plaka yüzey seçenekleri ve renk katalogu)
@@ -2234,7 +2353,16 @@ with tab1:
 with tab2:
     if model_error:
         st.error(f"❌ {model_error}")
-        st.info("Çözüm: Terminalde `python train_model.py` komutunu çalıştırın")
+        import sklearn as _sk
+        st.info(
+            f"ℹ️ **Ortam bilgisi:** scikit-learn `{_sk.__version__}`, "
+            f"Python `{__import__('sys').version.split()[0]}`\n\n"
+            "**Olası çözümler:**\n"
+            "1. `requirements.txt` dosyasında `scikit-learn==` satırının mevcut sürümle eşleştiğini kontrol edin.\n"
+            "2. `Pres_parametre_Master_dosya.csv` dosyasının GitHub reposunda bulunduğundan emin olun "
+            "(bu sayede Streamlit Cloud modeli otomatik olarak yeniden eğitir).\n"
+            "3. Modeli lokal ortamda yeniden eğitmek için terminalde `python train_model.py` çalıştırın."
+        )
     else:
         st.markdown('<div class="section-header">OPTİMİZASYON PARAMETRELERİ</div>', unsafe_allow_html=True)
         

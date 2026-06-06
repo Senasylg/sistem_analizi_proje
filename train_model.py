@@ -669,6 +669,7 @@ def main():
         joblib.dump(best_model, pipeline_path)
         print(f"   [OK] Pipeline kaydedildi: {pipeline_path}")
 
+        import sklearn as _sklearn
         feature_info = {
             'artifact': 'pipeline_v2',
             'target_col': target_col,
@@ -678,11 +679,13 @@ def main():
             'feature_engineering': bool(engineered_cols),
             'feature_set': chosen_feature_set,
             'training_strategy': 'stable_pruned',
+            'sklearn_version': _sklearn.__version__,
         }
         feature_info_path = 'models/feature_info.pkl'
         _backup_if_exists(feature_info_path)
         joblib.dump(feature_info, feature_info_path)
         print(f"   [OK] Feature bilgisi kaydedildi: {feature_info_path}")
+        print(f"   [OK] Eğitimde kullanılan scikit-learn: {_sklearn.__version__}")
 
         print("\n" + "=" * 60)
         print("[OK] MODEL EĞİTİMİ TAMAMLANDI")
@@ -901,6 +904,7 @@ def main():
     joblib.dump(best_model, pipeline_path)
     print(f"   [OK] Pipeline kaydedildi: {pipeline_path}")
 
+    import sklearn as _sklearn
     feature_info = {
         'artifact': 'pipeline_v2',
         'target_col': target_col,
@@ -909,11 +913,13 @@ def main():
         'categorical_feature': categorical_feature,
         'feature_engineering': bool(engineered_cols),
         'feature_set': chosen_feature_set,
+        'sklearn_version': _sklearn.__version__,
     }
     feature_info_path = 'models/feature_info.pkl'
     _backup_if_exists(feature_info_path)
     joblib.dump(feature_info, feature_info_path)
     print(f"   [OK] Feature bilgisi kaydedildi: {feature_info_path}")
+    print(f"   [OK] Eğitimde kullanılan scikit-learn: {_sklearn.__version__}")
 
     print("\n" + "=" * 60)
     print("[OK] MODEL EĞİTİMİ TAMAMLANDI")
